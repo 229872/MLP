@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.Random;
 
 public class Network {
@@ -11,6 +12,7 @@ public class Network {
     private double[][][] weights;
     //bias[indexOfLayer][indexOfNeuron]
     private double[][] bias;
+    private boolean isBias;
 
     private double[][] error_signal;
     private double[][] output_derivative;
@@ -84,6 +86,26 @@ public class Network {
         calculate(input);
         backpropError(target);
         updateWeights(eta);
+    }
+
+    public void train(double[][] inputs, double[][] targets, double eta, double iterations) {
+        for (int i = 0; i < iterations; i++) {
+            for (int j = 0; j < inputs.length; j++) {
+                train(inputs[j],targets[j],eta);
+            }
+        }
+    }
+
+    public void test(double[][] input, double[][] answers) {
+        for (int i = 0; i < input.length; i++) {
+            double[] output = calculate(input[i]);
+            Main.titlesMenu();
+            System.out.print(Arrays.toString(output) + "  ");
+            System.out.print(Main.showOutput(output) + "          ");
+            System.out.print(Main.showOutput(answers[i]) + "          ");
+            System.out.println(Main.checkOutput(Main.showOutput(output),Main.showOutput(answers[i])));
+            System.out.println();
+        }
     }
 
     public void backpropError(double[] target) {

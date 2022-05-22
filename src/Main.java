@@ -1,25 +1,29 @@
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) throws IOException {
+        //pobieranie danych z pliku
         double[][][] fullData = DataManager.readFromFile("train.csv");
         double[][] inputs = fullData[0];
         double[][] outputs = fullData[1];
 
-        Network network = new Network(4,1,3,3);
-        for (int i = 0; i < 1000; i++) {
-            for (int j = 0; j < inputs.length; j++) {
-                network.train(inputs[j],outputs[j],0.3);
-            }
-        }
-        double[] output = network.calculate(5.0,3.2,1.2,0.2);
-        System.out.println(Arrays.toString(output));
-        System.out.println(checkOutput(output));
+        //tworzenie sieci
+        Network network = new Network(4,2,3,3);
+
+        //uczenie
+        network.train(inputs,outputs,0.4,10000);
+
+        //testowanie
+        double [][][] testData = DataManager.readFromFile("test.csv");
+        double[][] inputTestData = testData[0];
+        double[][] answers = testData[1];
+
+
+        network.test(inputTestData,answers);
     }
 
-    public static String checkOutput(double[] output) {
+    public static String showOutput(double[] output) {
         int maxAt = 0;
         for (int i = 1; i < output.length; i++) {
             maxAt = output[i] > output[maxAt] ? i : maxAt;
@@ -31,5 +35,17 @@ public class Main {
         } else  {
             return "Iris-virginica";
         }
+    }
+
+    public static boolean checkOutput(String testOutput, String dataTestOutput) {
+        if(testOutput.equals(dataTestOutput)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public static void titlesMenu() {
+        System.out.println("                            Network Output                       Network answer          Real answer       Is true?");
     }
 }
