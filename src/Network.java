@@ -1,7 +1,9 @@
+import java.io.*;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Scanner;
 
-public class Network {
+public class Network implements Serializable {
     //wyjscia, wagi i bias przedstawione sa jako macierze, pierwszy wymiar mowi o
     //przynaleznosci do warstwy, 2 identyfikuje neuron w danej warstwie
     //3 wymiar w wagach identyfikuje neuron z poprzedniej warstwy
@@ -23,6 +25,17 @@ public class Network {
     public final int NETWORK_SIZE;
 
     public Network(int ... NETWORK_LAYER_SIZES) {
+        //czy chcemy bias
+        System.out.print("Do you want bias? (Y/N): ");
+        Scanner scanner = new Scanner(System.in);
+        String decision = scanner.nextLine();
+        this.isBias = decision.equals("Y");
+        if(isBias) {
+            System.out.println("Bias included");
+        } else {
+            System.out.println("Bias not included");
+        }
+
         //argumenty konstruktora to kolejne wielkosci kazdej warstwy
         this.NETWORK_LAYER_SIZES = NETWORK_LAYER_SIZES;
         this.INPUT_SIZE = NETWORK_LAYER_SIZES[0];
@@ -32,8 +45,9 @@ public class Network {
 
         this.output = new double[NETWORK_SIZE][];
         this.weights = new double[NETWORK_SIZE][][];
-        this.bias = new double[NETWORK_SIZE][];
-
+        if(isBias) {
+            this.bias = new double[NETWORK_SIZE][];
+        }
         this.error_signal = new double[NETWORK_SIZE][];
         this.output_derivative = new double[NETWORK_SIZE][];
 
@@ -41,10 +55,13 @@ public class Network {
             this.output[layer] = new double[NETWORK_LAYER_SIZES[layer]];
             this.error_signal[layer] = new double[NETWORK_LAYER_SIZES[layer]];
             this.output_derivative[layer] = new double[NETWORK_LAYER_SIZES[layer]];
-            this.bias[layer] = new double[NETWORK_LAYER_SIZES[layer]];
-            for (int neuron = 0; neuron < NETWORK_LAYER_SIZES[layer]; neuron++) {
-                this.bias[layer][neuron] = 1;
+            if(isBias) {
+                this.bias[layer] = new double[NETWORK_LAYER_SIZES[layer]];
+                for (int neuron = 0; neuron < NETWORK_LAYER_SIZES[layer]; neuron++) {
+                    this.bias[layer][neuron] = 1;
+                }
             }
+
             //wagi nie obejmuja 0 warstwy wejsciowej
             if(layer > 0) {
                 Random random = new Random();
@@ -52,6 +69,7 @@ public class Network {
                 for (int neuron = 0; neuron < NETWORK_LAYER_SIZES[layer]; neuron++) {
                     weights[layer][neuron] = new double[NETWORK_LAYER_SIZES[layer - 1]];
                     for (int prevLayerNeuron = 0; prevLayerNeuron < NETWORK_LAYER_SIZES[layer - 1]; prevLayerNeuron++) {
+                        //losowanie wag z przedzialu
                         weights[layer][neuron][prevLayerNeuron] = random.nextDouble(-0.5,0.5);
                     }
                 }
@@ -74,7 +92,9 @@ public class Network {
                     //sumujemy wejscia do neuronu czyli wyjscia z warstwy poprzedniej pomnozone przez wagi pomiedzy neuronami
                     sum += output[layer - 1][prevLayerNeuron] * weights[layer][neuron][prevLayerNeuron];
                 }
-                sum += bias[layer][neuron];
+                if(isBias) {
+                    sum += bias[layer][neuron];
+                }
                 output[layer][neuron] = sigmoid(sum);
                 output_derivative[layer][neuron] = (output[layer][neuron] * (1 - output[layer][neuron]));
             }
@@ -132,9 +152,27 @@ public class Network {
                     delta = -eta * output[layer-1][prevNeuron] * error_signal[layer][neuron];
                     weights[layer][neuron][prevNeuron] += delta;
                 }
-                delta = -eta * error_signal[layer][neuron];
-                bias[layer][neuron] += delta;
+                if(isBias) {
+                    delta = -eta * error_signal[layer][neuron];
+                    bias[layer][neuron] += delta;
+                }
             }
         }
+    }
+
+    public void save(String path) throws IOException {
+        File file = new File(path);
+        ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(file));
+        output.writeObject(this);
+        output.flush();
+        output.close();
+    }
+
+    public static Network load(String path) throws IOException, ClassNotFoundException {
+        File file = new File(path);
+        ObjectInputStream input = new ObjectInputStream(new FileInputStream(file));
+        Network network = (Network) input.readObject();
+        input.close();
+        return network;
     }
 }
