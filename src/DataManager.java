@@ -62,4 +62,12 @@ public class DataManager {
             System.out.println();
         }
     }
+
+    public static void addDataTofile(double data) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("data.txt",true));
+        PrintWriter out = new PrintWriter(writer);
+        writer.write(Double.toString(data));
+        writer.write("\n");
+        writer.close();
+    }
 }

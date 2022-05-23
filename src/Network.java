@@ -9,20 +9,22 @@ public class Network implements Serializable {
     //3 wymiar w wagach identyfikuje neuron z poprzedniej warstwy
 
     //output[indexOfLayer][indexOfNeuron]
-    private double[][] output;
+    private final double[][] output;
     //weights[indexOfLayer][indexOfNeuron][indexOfprevNeuron]
-    private double[][][] weights;
+    private final double[][][] weights;
     //bias[indexOfLayer][indexOfNeuron]
     private double[][] bias;
-    private boolean isBias;
+    private final boolean isBias;
 
-    private double[][] error_signal;
-    private double[][] output_derivative;
+    private final double[][] error_signal;
+    private final double[][] output_derivative;
 
     public final int[] NETWORK_LAYER_SIZES;
     public final int INPUT_SIZE;
     public final int OUTPUT_SIZE;
     public final int NETWORK_SIZE;
+    //pomocnicze pole uzywane przy momentum
+    private final double[][][] prevWeights;
 
     public Network(int ... NETWORK_LAYER_SIZES) {
         //czy chcemy bias
@@ -45,6 +47,7 @@ public class Network implements Serializable {
 
         this.output = new double[NETWORK_SIZE][];
         this.weights = new double[NETWORK_SIZE][][];
+        this.prevWeights = new double[NETWORK_SIZE][][];
         if(isBias) {
             this.bias = new double[NETWORK_SIZE][];
         }
@@ -65,12 +68,19 @@ public class Network implements Serializable {
             //wagi nie obejmuja 0 warstwy wejsciowej
             if(layer > 0) {
                 Random random = new Random();
+                double randomValue;
                 weights[layer] = new double[NETWORK_LAYER_SIZES[layer]][];
+                prevWeights[layer] = new double[NETWORK_LAYER_SIZES[layer]][];
                 for (int neuron = 0; neuron < NETWORK_LAYER_SIZES[layer]; neuron++) {
                     weights[layer][neuron] = new double[NETWORK_LAYER_SIZES[layer - 1]];
+                    prevWeights[layer][neuron] = new double[NETWORK_LAYER_SIZES[layer - 1]];
                     for (int prevLayerNeuron = 0; prevLayerNeuron < NETWORK_LAYER_SIZES[layer - 1]; prevLayerNeuron++) {
                         //losowanie wag z przedzialu
-                        weights[layer][neuron][prevLayerNeuron] = random.nextDouble(-0.5,0.5);
+                        do {
+                            randomValue = random.nextDouble(-0.5,0.5);
+                        } while (randomValue == 0.0);
+                        weights[layer][neuron][prevLayerNeuron] = randomValue;
+                        prevWeights[layer][neuron][prevLayerNeuron] = 0.0;
                     }
                 }
             }
@@ -81,6 +91,7 @@ public class Network implements Serializable {
         return (double) 1 / (1 + Math.exp(-x));
     }
 
+    //propagacja w przód
     public double[] calculate(double... input) {
         //inicjowanie warstwy wejsciowej
         this.output[0] = input;
@@ -108,11 +119,60 @@ public class Network implements Serializable {
         updateWeights(eta);
     }
 
-    public void train(double[][] inputs, double[][] targets, double eta, double iterations) {
-        for (int i = 0; i < iterations; i++) {
-            for (int j = 0; j < inputs.length; j++) {
-                train(inputs[j],targets[j],eta);
+    public void trainWithMomentum(double[] input, double[] target, double eta, double alfa) {
+        calculate(input);
+        backpropError(target);
+        updateWeights(eta,alfa);
+    }
+
+    public void train(double[][] inputs, double[][] targets, double eta, int iterations, double error) throws IOException {
+        if(iterations != 0) {
+            for (int i = 0; i < iterations; i++) {
+                for (int j = 0; j < inputs.length; j++) {
+                    train(inputs[j],targets[j],eta);
+                }
+                if(i % 50 == 0) {
+                    DataManager.addDataTofile(calculateError(inputs,targets));
+                }
             }
+        }
+        if(error != 0.0) {
+            int loopCounter = 0;
+            do {
+                for (int j = 0; j < inputs.length; j++) {
+                    train(inputs[j],targets[j],eta);
+                }
+                loopCounter++;
+                if(loopCounter % 50 == 0) {
+                    DataManager.addDataTofile(calculateError(inputs,targets));
+                }
+            } while (calculateError(inputs,targets) > error && loopCounter < 2000000);
+        }
+    }
+
+    public void trainWithMomentum(double[][] inputs, double[][] targets, double eta, double alfa, int iterations, double error) throws IOException {
+        if(iterations != 0) {
+            for (int i = 0; i < iterations; i++) {
+                for (int j = 0; j < inputs.length; j++) {
+                    trainWithMomentum(inputs[j],targets[j],eta,alfa);
+                }
+
+                if(i % 50 == 0) {
+                    DataManager.addDataTofile(calculateError(inputs,targets));
+                }
+            }
+        }
+        if(error != 0.0) {
+            int loopCounter = 0;
+            do {
+                for (int j = 0; j < inputs.length; j++) {
+                    trainWithMomentum(inputs[j],targets[j],eta,alfa);
+                }
+                loopCounter++;
+                if(loopCounter % 50 == 0) {
+                    DataManager.addDataTofile(calculateError(inputs,targets));
+                }
+            } while (calculateError(inputs,targets) > error && loopCounter < 2000000);
         }
     }
 
@@ -160,6 +220,24 @@ public class Network implements Serializable {
         }
     }
 
+    public void updateWeights(double eta, double alfa) {
+        double delta;
+        for(int layer = 1; layer < NETWORK_SIZE; layer++) {
+            for(int neuron = 0; neuron < NETWORK_LAYER_SIZES[layer]; neuron++) {
+                for(int prevNeuron = 0; prevNeuron < NETWORK_LAYER_SIZES[layer - 1]; prevNeuron++) {
+                    delta = -eta * output[layer-1][prevNeuron] * error_signal[layer][neuron] +
+                            alfa * (weights[layer][neuron][prevNeuron] - prevWeights[layer][neuron][prevNeuron]);
+                    weights[layer][neuron][prevNeuron] += delta;
+                    prevWeights[layer][neuron][prevNeuron] = weights[layer][neuron][prevNeuron];
+                }
+                if(isBias) {
+                    delta = -eta * error_signal[layer][neuron];
+                    bias[layer][neuron] += delta;
+                }
+            }
+        }
+    }
+
     public void save(String path) throws IOException {
         File file = new File(path);
         ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(file));
@@ -174,5 +252,17 @@ public class Network implements Serializable {
         Network network = (Network) input.readObject();
         input.close();
         return network;
+    }
+
+    public double calculateError(double[][] inputs, double[][] targets) {
+        double v = 0.0;
+        for (int i = 0; i < inputs.length; i++) {
+            calculate(inputs[i]);
+            for (int j = 0; j < targets[i].length; j++) {
+                v += (targets[i][j] - output[NETWORK_SIZE-1][j]) * (targets[i][j] - output[NETWORK_SIZE-1][j]);
+            }
+        }
+
+        return v / (2.0d * targets.length * targets[0].length);
     }
 }

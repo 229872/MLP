@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
@@ -87,16 +88,38 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         switch (choice) {
             case 1:
-                double learningRate;
+                double learningRate, error;
                 int iterations;
                 System.out.print("Enter learning rate: ");
                 learningRate = scanner.nextDouble();
-                System.out.print("Enter number of iterations: ");
-                iterations = scanner.nextInt();
-                System.out.println("Starting learning");
-
+                scanner.nextLine();
+                System.out.print("Press Y to set number of iterations or sth else to set error: ");
+                if(scanner.nextLine().equals("Y")) {
+                    System.out.print("Enter number of iterations: ");
+                    iterations = scanner.nextInt();
+                    error = 0.0;
+                    scanner.nextLine();
+                } else {
+                    System.out.print("Enter error: ");
+                    error = scanner.nextDouble();
+                    iterations = 0;
+                    scanner.nextLine();
+                }
+                System.out.print("Do you want randomised data? (Y,N): ");
+                if(scanner.nextLine().equals("Y")) {
+                    randomizeMatrix(inputs,outputs);
+                }
+                System.out.print("Do you want momentum? (Y,N): ");
+                if(scanner.nextLine().equals("Y")) {
+                    System.out.print("Enter alfa value (pref: α∈(0,1): ");
+                    double alfa = scanner.nextDouble();
+                    System.out.println("Starting learning");
+                    //uczenie
+                    network.trainWithMomentum(inputs,outputs,learningRate,alfa,iterations,error);
+                    break;
+                }
                 //uczenie
-                network.train(inputs,outputs,learningRate,iterations);
+                network.train(inputs,outputs,learningRate,iterations, error);
                 break;
             case 2:
                 //testowanie
@@ -116,4 +139,23 @@ public class Main {
         return true;
     }
 
+    public static void randomizeMatrix(double[][] inputData, double[][] outputData) {
+        Random random = new Random();
+        double[] inputBuff, outputBuff;
+        int randIndex1, randIndex2;
+        for (int i = 0; i < random.nextInt(0,inputData.length); i++) {
+            randIndex1 = random.nextInt(0,inputData.length);
+            randIndex2 = random.nextInt(0,inputData.length);
+            //przeniesienie wylosowanego wiersza z wejsc i wyjsc do bufora
+            inputBuff = inputData[randIndex1];
+            outputBuff = outputData[randIndex1];
+
+            inputData[randIndex1] = inputData[randIndex2];
+            outputData[randIndex1] = outputData[randIndex2];
+
+            inputData[randIndex2] = inputBuff;
+            outputData[randIndex2] = outputBuff;
+
+        }
+    }
 }
