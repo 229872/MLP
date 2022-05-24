@@ -126,66 +126,95 @@ public class Network implements Serializable {
     }
 
     public void train(double[][] inputs, double[][] targets, double eta, int iterations, double error) throws IOException {
-        if(iterations != 0) {
-            for (int i = 0; i < iterations; i++) {
-                for (int j = 0; j < inputs.length; j++) {
-                    train(inputs[j],targets[j],eta);
-                }
-                if(i % 50 == 0) {
-                    DataManager.addDataTofile(calculateError(inputs,targets));
-                }
+        int i = 0;
+        while (i < iterations && calculateError(inputs,targets) > error){
+            for (int j = 0; j < inputs.length; j++) {
+                train(inputs[j],targets[j],eta);
             }
-        }
-        if(error != 0.0) {
-            int loopCounter = 0;
-            do {
-                for (int j = 0; j < inputs.length; j++) {
-                    train(inputs[j],targets[j],eta);
-                }
-                loopCounter++;
-                if(loopCounter % 50 == 0) {
-                    DataManager.addDataTofile(calculateError(inputs,targets));
-                }
-            } while (calculateError(inputs,targets) > error && loopCounter < 2000000);
+            if(i % 50 == 0) {
+                DataManager.addDataTofile(calculateError(inputs,targets));
+            }
+            i++;
         }
     }
 
     public void trainWithMomentum(double[][] inputs, double[][] targets, double eta, double alfa, int iterations, double error) throws IOException {
-        if(iterations != 0) {
-            for (int i = 0; i < iterations; i++) {
-                for (int j = 0; j < inputs.length; j++) {
-                    trainWithMomentum(inputs[j],targets[j],eta,alfa);
-                }
-
-                if(i % 50 == 0) {
-                    DataManager.addDataTofile(calculateError(inputs,targets));
-                }
+        int i = 0;
+        while (i < iterations && calculateError(inputs,targets) > error) {
+            for (int j = 0; j < inputs.length; j++) {
+                trainWithMomentum(inputs[j],targets[j],eta,alfa);
             }
-        }
-        if(error != 0.0) {
-            int loopCounter = 0;
-            do {
-                for (int j = 0; j < inputs.length; j++) {
-                    trainWithMomentum(inputs[j],targets[j],eta,alfa);
-                }
-                loopCounter++;
-                if(loopCounter % 50 == 0) {
-                    DataManager.addDataTofile(calculateError(inputs,targets));
-                }
-            } while (calculateError(inputs,targets) > error && loopCounter < 2000000);
+            if(i % 50 == 0) {
+                DataManager.addDataTofile(calculateError(inputs,targets));
+            }
+            i++;
         }
     }
 
-    public void test(double[][] input, double[][] answers) {
+    public int[][] test(double[][] input, double[][] answers) throws IOException {
+        int[][] confusionMatrix = new int[3][3];
+        int setosa,versicolor,virginica,setosaAll,versicolorAll,virginicaAll,all;
+        setosa = versicolor = virginica = setosaAll = versicolorAll = virginicaAll = 0;
+        String type;
         for (int i = 0; i < input.length; i++) {
             double[] output = calculate(input[i]);
+            DataManager.sendTestData(input[i],calculateError(input[i],answers[i]),answers[i],error_signal[NETWORK_SIZE-1],output,
+                    weights[NETWORK_SIZE-1],this.output,this.weights);
+
+
             Main.titlesMenu();
             System.out.print(Arrays.toString(output) + "  ");
             System.out.print(Main.showOutput(output) + "          ");
             System.out.print(Main.showOutput(answers[i]) + "          ");
+            type = Main.showOutput(answers[i]);
+            //confusion Matrix  setosa  versicolor  virginica
+            //           setosa
+            //          versicolor
+            //          virginica
+
+            switch (type) {
+                case "Iris-setosa":
+                    setosaAll++;
+                    if(Main.checkOutput(Main.showOutput(output),Main.showOutput(answers[i]))) {
+                        setosa++;
+                        confusionMatrix[0][0]++;
+                    } else if(Main.showOutput(output).equals("Iris-versicolor")){
+                        confusionMatrix[0][1]++;
+                    } else if(Main.showOutput(output).equals("Iris-virginica")) {
+                        confusionMatrix[0][2]++;
+                    }
+                    break;
+                case "Iris-versicolor":
+                    versicolorAll++;
+                    if(Main.checkOutput(Main.showOutput(output),Main.showOutput(answers[i]))) {
+                        versicolor++;
+                        confusionMatrix[1][1]++;
+                    } else if(Main.showOutput(output).equals("Iris-setosa")){
+                        confusionMatrix[1][0]++;
+                    } else if(Main.showOutput(output).equals("Iris-virginica")) {
+                        confusionMatrix[1][2]++;
+                    }
+                    break;
+                case "Iris-virginica":
+                    virginicaAll++;
+                    if(Main.checkOutput(Main.showOutput(output),Main.showOutput(answers[i]))) {
+                        virginica++;
+                        confusionMatrix[2][2]++;
+                    } else if(Main.showOutput(output).equals("Iris-setosa")){
+                        confusionMatrix[2][0]++;
+                    } else if(Main.showOutput(output).equals("Iris-versicolor")) {
+                        confusionMatrix[2][1]++;
+                    }
+                    break;
+            }
             System.out.println(Main.checkOutput(Main.showOutput(output),Main.showOutput(answers[i])));
             System.out.println();
         }
+        all = versicolorAll + virginicaAll + setosaAll;
+        int allTrue = setosa + versicolor + virginica;
+        System.out.println("Result: All: " + allTrue + "/" + all + " Setosa: " + setosa + "/" + setosaAll +
+                " Versicolor: " + versicolor + "/" + versicolorAll + " Virginica: " + virginica + "/" + virginicaAll);
+        return confusionMatrix;
     }
 
     public void backpropError(double[] target) {
@@ -264,5 +293,14 @@ public class Network implements Serializable {
         }
 
         return v / (2.0d * targets.length * targets[0].length);
+    }
+
+    public double calculateError(double[] input, double[] target) {
+        calculate(input);
+        double v = 0.0;
+        for (int i = 0; i < target.length; i++) {
+            v += (target[i] - output[NETWORK_SIZE-1][i]) * (target[i] - output[NETWORK_SIZE-1][i]);
+        }
+        return v / (2.0d * target.length);
     }
 }

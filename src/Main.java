@@ -93,18 +93,12 @@ public class Main {
                 System.out.print("Enter learning rate: ");
                 learningRate = scanner.nextDouble();
                 scanner.nextLine();
-                System.out.print("Press Y to set number of iterations or sth else to set error: ");
-                if(scanner.nextLine().equals("Y")) {
-                    System.out.print("Enter number of iterations: ");
-                    iterations = scanner.nextInt();
-                    error = 0.0;
-                    scanner.nextLine();
-                } else {
-                    System.out.print("Enter error: ");
-                    error = scanner.nextDouble();
-                    iterations = 0;
-                    scanner.nextLine();
-                }
+                System.out.print("Enter number of iterations: ");
+                iterations = scanner.nextInt();
+                scanner.nextLine();
+                System.out.print("Enter error: ");
+                error = scanner.nextDouble();
+                scanner.nextLine();
                 System.out.print("Do you want randomised data? (Y,N): ");
                 if(scanner.nextLine().equals("Y")) {
                     randomizeMatrix(inputs,outputs);
@@ -127,7 +121,10 @@ public class Main {
                 double [][][] testData = DataManager.readFromFile(scanner.nextLine());
                 double[][] inputTestData = testData[0];
                 double[][] answers = testData[1];
-                network.test(inputTestData,answers);
+                int[][] confusionMatrix = network.test(inputTestData,answers);
+                showMatrix(confusionMatrix);
+                double[][] metrics = calculateMetrics(confusionMatrix);
+                showMetrics(metrics);
                 break;
             case 3:
                 System.out.println("Enter name of file to save network");
@@ -156,6 +153,59 @@ public class Main {
             inputData[randIndex2] = inputBuff;
             outputData[randIndex2] = outputBuff;
 
+        }
+    }
+
+    public static void showMatrix(int[][] matrix) {
+        System.out.println();
+        for (int[] row : matrix) {
+            for (int value : row) {
+                System.out.print(value + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    public static double[][] calculateMetrics(int[][] matrix) {
+        double[][] metrics = new double[3][3];
+        //      Metrics matrics                                             Confusion Matrix
+        //          recall     precision      f-measure                     setosa      versicolor      virginica
+        //setosa                                                setosa
+        //versicolor                                            versicolor
+        //virginica                                             virginica
+
+
+        //Recall = TP/(TP + FN)
+        metrics[0][0] = (double) matrix[0][0] / (matrix[0][0] + matrix[0][1] + matrix[0][2]);
+        metrics[1][0] = (double) matrix[1][1] / (matrix[1][1] + matrix[1][0] + matrix[1][2]);
+        metrics[2][0] = (double) matrix[2][2] / (matrix[2][2] + matrix[2][0] + matrix[2][1]);
+
+        //Precision = TP/(TP + FP)
+        metrics[0][1] = (double) matrix[0][0] / (matrix[0][0] + matrix[1][0] + matrix[2][0]);
+        metrics[1][1] = (double) matrix[1][1] / (matrix[1][1] + matrix[0][1] + matrix[2][1]);
+        metrics[2][1] = (double) matrix[2][2] / (matrix[2][2] + matrix[0][2] + matrix[1][2]);
+
+        //F1 = 2 * precision * recall / (precision + recall)
+        metrics[0][2] = 2 * metrics[0][1] * metrics[0][0] / (metrics[0][1] + metrics[0][0]);
+        metrics[1][2] = 2 * metrics[1][1] * metrics[1][0] / (metrics[1][1] + metrics[1][0]);
+        metrics[2][2] = 2 * metrics[2][1] * metrics[2][0] / (metrics[2][1] + metrics[2][0]);
+        return metrics;
+    }
+
+    public static void showMetrics(double[][] metrics) {
+        System.out.println("            Recall      Precision       F1-score");
+        for (int i = 0; i < metrics.length; i++) {
+            if(i == 0) {
+                System.out.print("For setosa: ");
+            } else if (i == 1) {
+                System.out.print("For versicolor: ");
+            } else {
+                System.out.print("For virginica: ");
+            }
+            for (double value : metrics[i]) {
+                System.out.print(value + "      ");
+            }
+            System.out.println();
         }
     }
 }

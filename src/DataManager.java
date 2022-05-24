@@ -70,4 +70,55 @@ public class DataManager {
         writer.write("\n");
         writer.close();
     }
+
+    public static void sendTestData(double[] input, double networkError, double[] answer, double[] errors,
+                                    double[] outputs, double[][] outputWages, double[][] neuronsOutputs, double[][][] weights) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("testData.txt",true));
+        writer.write("-------------------------------------------------------------------------------------------------------\n");
+        writer.write("Wzorzec wejsciowy: ");
+        for (double in : input) {
+            writer.write(Double.toString(in) + " ");
+        }
+        writer.write("\nBłąd sieci: ");
+        writer.write(Double.toString(networkError));
+        writer.write("\nPożądany wzorzec odpowiedzi: ");
+        for (double ans : answer) {
+            writer.write(Double.toString(ans) + " ");
+        }
+        writer.write("\nBłędy na poszczególnych wyjściach: ");
+        for (double err : errors) {
+            writer.write(Double.toString(err) + " ");
+        }
+        writer.write("\nWartości wyjściowych neuronów wyjściowych: ");
+        for (double out : outputs) {
+            writer.write(Double.toString(out) + " ");
+        }
+        writer.write("\n\nWagi neuronów wyjściowych: \n");
+        for (double[] outputWage : outputWages) {
+            for (double v : outputWage) {
+                writer.write(Double.toString(v) + " ");
+            }
+            writer.write("\n");
+        }
+        writer.write("\nWartości wyjściowe neuronów ukrytych: \n");
+        for (int layer = 1; layer < neuronsOutputs.length - 1; layer++) {
+            for (int neuronValue = 0; neuronValue < neuronsOutputs[layer].length; neuronValue++) {
+                writer.write(Double.toString(neuronsOutputs[layer][neuronValue]) + " ");
+            }
+            writer.write("\n");
+        }
+        writer.write("\nWartości wag neuronów ukrytych od warstw dalszych względem wejść sieci do bliższych: \n");
+        for (int layer = weights.length - 2; layer > 0; layer--) {
+            writer.write("Warstwa : " + layer + "\n");
+            for (int indexOfNeuron = 0; indexOfNeuron < weights[layer].length; indexOfNeuron++) {
+                for (int indexOfPrevNeuron = 0; indexOfPrevNeuron < weights[layer][indexOfNeuron].length; indexOfPrevNeuron++) {
+                    writer.write(Double.toString(weights[layer][indexOfNeuron][indexOfPrevNeuron]) + " ");
+                }
+                writer.write("\n");
+            }
+            writer.write("\n");
+        }
+        writer.write("-------------------------------------------------------------------------------------------------------\n");
+        writer.close();
+    }
 }
