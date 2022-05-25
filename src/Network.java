@@ -155,7 +155,8 @@ public class Network implements Serializable {
         for (int i = 0; i < input.length; i++) {
             double[] output = calculate(input[i]);
             System.out.println(Arrays.toString(output));
-            DataManager.sendTestData(this.output);
+            DataManager.sendTestData(input[i],calculateError(input[i],answers[i]),answers[i],error_signal[NETWORK_SIZE-1],output,
+                    weights[NETWORK_SIZE-1],this.output,this.weights);
         }
     }
 
