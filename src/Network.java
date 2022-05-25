@@ -8,7 +8,7 @@ public class Network implements Serializable {
     //przynaleznosci do warstwy, 2 identyfikuje neuron w danej warstwie
     //3 wymiar w wagach identyfikuje neuron z poprzedniej warstwy
 
-    //output[indexOfLayer][indexOfNeuron]
+    //outputs[indexOfLayer][indexOfNeuron]
     private final double[][] output;
     //weights[indexOfLayer][indexOfNeuron][indexOfprevNeuron]
     private final double[][][] weights;
@@ -148,6 +148,14 @@ public class Network implements Serializable {
                 DataManager.addDataTofile(calculateError(inputs,targets));
             }
             i++;
+        }
+    }
+
+    public void test(double[][] input, double[][] answers, boolean choice) throws IOException {
+        for (int i = 0; i < input.length; i++) {
+            double[] output = calculate(input[i]);
+            System.out.println(Arrays.toString(output));
+            DataManager.sendTestData(this.output);
         }
     }
 

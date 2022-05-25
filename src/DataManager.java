@@ -121,4 +121,11 @@ public class DataManager {
         writer.write("-------------------------------------------------------------------------------------------------------\n");
         writer.close();
     }
+
+    public static void sendTestData(double[][] outputs) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("autonekoderData.txt",true));
+        writer.write(Double.toString(outputs[1][0]) + " ");
+        writer.write(Double.toString(outputs[1][1]) + " ");
+        writer.close();
+    }
 }

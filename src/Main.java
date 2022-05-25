@@ -4,27 +4,53 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        //tworzenie sieci
         Scanner scanner = new Scanner(System.in);
+        String ch;
         int choice;
+        System.out.print("Enter Y if you wan iris data or sth else for autoenkoder: ");
+        ch = scanner.nextLine();
+        if(ch.equals("Y")) {
+            //tworzenie sieci
 
-        System.out.print("Enter path with data: ");
-        String path = scanner.nextLine();
+            System.out.print("Enter path with data: ");
+            String path = scanner.nextLine();
 
-        //pobieranie danych z pliku
-        double[][][] fullData = DataManager.readFromFile(path);
-        double[][] inputs = fullData[0];
-        double[][] outputs = fullData[1];
+            //pobieranie danych z pliku
+            double[][][] fullData = DataManager.readFromFile(path);
+            double[][] inputs = fullData[0];
+            double[][] outputs = fullData[1];
 
-        menu1();
-        choice = scanner.nextInt();
-        Network network = createNetwork(choice);
-        //--------------------------------------------------------------
-        //trenowanie, zapisywanie, testowanie
-        do {
-            menu2();
+            menu1();
             choice = scanner.nextInt();
-        } while (networkOperations(network,choice,inputs,outputs));
+            Network network = createNetwork(choice,true);
+            //--------------------------------------------------------------
+            //trenowanie, zapisywanie, testowanie
+            do {
+                menu2();
+                choice = scanner.nextInt();
+            } while (networkOperations(network,choice,inputs,outputs,true));
+        } else {
+            menu1();
+            choice = scanner.nextInt();
+            scanner.nextLine();
+            Network network = createNetwork(choice,false);
+            double[][] inputs = {
+                    {1,0,0,0},
+                    {0,1,0,0},
+                    {0,0,1,0},
+                    {0,0,0,1}
+            };
+            double[][] outputs = {
+                    {1,0,0,0},
+                    {0,1,0,0},
+                    {0,0,1,0},
+                    {0,0,0,1}
+            };
+            do {
+                menu2();
+                choice = scanner.nextInt();
+            } while (networkOperations(network,choice,inputs,outputs,false));
+        }
     }
 
     public static String showOutput(double[] output) {
@@ -61,20 +87,24 @@ public class Main {
         System.out.println("4) Exit program");
     }
 
-    public static Network createNetwork(int choice) throws IOException, ClassNotFoundException {
+    public static Network createNetwork(int choice, boolean variant) throws IOException, ClassNotFoundException {
         Scanner scanner = new Scanner(System.in);
         switch (choice) {
             case 1 -> {
-                String[] line;
-                System.out.println("Enter sizes of each layer in network seperated by coma (e.g 4,4,3");
-                line = scanner.nextLine().split(",");
-                int[] numbers = new int[line.length];
-                for (int i = 0; i < line.length; i++) {
-                    numbers[i] = Integer.parseInt(line[i]);
-                }
+                if(variant) {
+                    String[] line;
+                    System.out.println("Enter sizes of each layer in network seperated by coma (e.g 4,4,3");
+                    line = scanner.nextLine().split(",");
+                    int[] numbers = new int[line.length];
+                    for (int i = 0; i < line.length; i++) {
+                        numbers[i] = Integer.parseInt(line[i]);
+                    }
 
-                //tworzenie sieci
-                return new Network(numbers);
+                    //tworzenie sieci
+                    return new Network(numbers);
+                } else {
+                    return new Network(4,2,4);
+                }
             }
             case 2 -> {
                 System.out.println("Enter path for file you want load network");
@@ -84,7 +114,7 @@ public class Main {
         return null;
     }
 
-    public static boolean networkOperations(Network network, int choice, double[][] inputs, double[][] outputs) throws IOException {
+    public static boolean networkOperations(Network network, int choice, double[][] inputs, double[][] outputs, boolean variant) throws IOException {
         Scanner scanner = new Scanner(System.in);
         switch (choice) {
             case 1:
@@ -112,19 +142,25 @@ public class Main {
                     network.trainWithMomentum(inputs,outputs,learningRate,alfa,iterations,error);
                     break;
                 }
+                System.out.println("Starting learning");
                 //uczenie
                 network.train(inputs,outputs,learningRate,iterations, error);
                 break;
             case 2:
-                //testowanie
-                System.out.println("Enter name of file to read test data");
-                double [][][] testData = DataManager.readFromFile(scanner.nextLine());
-                double[][] inputTestData = testData[0];
-                double[][] answers = testData[1];
-                int[][] confusionMatrix = network.test(inputTestData,answers);
-                showMatrix(confusionMatrix);
-                double[][] metrics = calculateMetrics(confusionMatrix);
-                showMetrics(metrics);
+                if(variant) {
+                    //testowanie
+                    System.out.println("Enter name of file to read test data");
+                    double [][][] testData = DataManager.readFromFile(scanner.nextLine());
+                    double[][] inputTestData = testData[0];
+                    double[][] answers = testData[1];
+                    int[][] confusionMatrix = network.test(inputTestData,answers);
+                    showMatrix(confusionMatrix);
+                    double[][] metrics = calculateMetrics(confusionMatrix);
+                    showMetrics(metrics);
+                } else {
+                    network.test(inputs,outputs,variant);
+                }
+
                 break;
             case 3:
                 System.out.println("Enter name of file to save network");
@@ -193,14 +229,14 @@ public class Main {
     }
 
     public static void showMetrics(double[][] metrics) {
-        System.out.println("            Recall      Precision       F1-score");
+        System.out.println("                Recall   Precision   F1-score");
         for (int i = 0; i < metrics.length; i++) {
             if(i == 0) {
-                System.out.print("For setosa: ");
+                System.out.print("For setosa:      ");
             } else if (i == 1) {
-                System.out.print("For versicolor: ");
+                System.out.print("For versicolor:  ");
             } else {
-                System.out.print("For virginica: ");
+                System.out.print("For virginica:   ");
             }
             for (double value : metrics[i]) {
                 System.out.print(value + "      ");
